@@ -1,25 +1,15 @@
-// --- [START] main.js (Upgraded Version) ---
+// --- [START] main.js (Fully Interactive Version) ---
 
 // --- Step 1: Import Content ---
-// We will import our learning content from other files.
-// Make sure you have created the file 'content/calculus.js'.
-// Note: Your browser will require you to load this as a module in your HTML.
-// In index.html, change your script tag to: <script type="module" src="main.js"></script>
 import { calculusPack } from './content/calculus.js';
 
-
 // --- DOM Element Selection ---
-// The main 'app' container will now hold all our different views.
 const app = document.getElementById('app');
-
-// We still need the original screen elements for the diagnostic
 const welcomeScreen = document.getElementById('welcome-screen');
 const diagnosticScreen = document.getElementById('diagnostic-screen');
-// The 'resultsScreen' is now replaced by the dashboard, but we keep the variable for now.
-const resultsScreen = document.getElementById('results-screen');
+const resultsScreen = document.getElementById('results-screen'); // Kept for initial structure
 
-
-// --- DATA & STATE (No changes here) ---
+// --- DATA & STATE ---
 const capsTopics = {
     algebra: { name: "Algebra, Equations & Inequalities", score: 0 },
     patterns: { name: "Number Patterns & Sequences", score: 0 },
@@ -32,7 +22,6 @@ const capsTopics = {
 };
 
 const questions = [
-    // Your existing questions array... (omitted for brevity, no changes needed)
     {
         title: "Recognition Round",
         text: "Which of these concepts look familiar to you? (Select all that apply)",
@@ -77,24 +66,21 @@ const questions = [
         options: [ { text: "Adjacent / Hypotenuse", correct: false }, { text: "Opposite / Adjacent", correct: false }, { text: "Opposite / Hypotenuse", correct: true }, { text: "Adjacent / Opposite", correct: false }, ]
     }
 ];
+
 let currentQuestionIndex = 0;
 let selectedAnswers = new Set();
 
-
-// --- DIAGNOSTIC QUIZ FUNCTIONS (Mostly unchanged) ---
+// --- DIAGNOSTIC QUIZ FUNCTIONS ---
 function startDiagnostic() {
     for (const key in capsTopics) { capsTopics[key].score = 0; }
     currentQuestionIndex = 0;
-    // We now hide the entire app container and then show the specific screen
-    app.innerHTML = ''; // Clear the main container
-    app.appendChild(diagnosticScreen); // Add the diagnostic screen back
+    app.innerHTML = '';
+    app.appendChild(diagnosticScreen);
     diagnosticScreen.classList.remove('hidden');
     showQuestion();
 }
 
 function showQuestion() {
-    // This function remains the same as your original.
-    // ... (your existing showQuestion logic)
     const question = questions[currentQuestionIndex];
     const progressBar = diagnosticScreen.querySelector('#progress-bar');
     const questionTitle = diagnosticScreen.querySelector('#question-title');
@@ -111,16 +97,40 @@ function showQuestion() {
 
     if (question.type === 'recognition') {
         nextBtn.disabled = false;
-        // ... (rest of your recognition logic)
+        question.options.forEach((option, index) => {
+            const button = document.createElement('button');
+            button.className = "w-full text-left p-4 border rounded-lg transition-colors duration-200 hover:bg-indigo-50";
+            button.textContent = option.text;
+            button.onclick = () => {
+                button.classList.toggle('bg-indigo-100');
+                button.classList.toggle('border-indigo-500');
+                selectedAnswers.has(index) ? selectedAnswers.delete(index) : selectedAnswers.add(index);
+            };
+            optionsContainer.appendChild(button);
+        });
     } else if (question.type === 'mcq') {
         nextBtn.disabled = true;
-        // ... (rest of your mcq logic)
+        nextBtn.classList.add('bg-gray-300', 'text-gray-500');
+        nextBtn.classList.remove('bg-indigo-600', 'text-white');
+        
+        question.options.forEach((option, index) => {
+            const button = document.createElement('button');
+            button.className = "w-full text-left p-4 border rounded-lg transition-colors duration-200 hover:bg-indigo-50";
+            button.textContent = option.text;
+            button.onclick = () => {
+                Array.from(optionsContainer.children).forEach(btn => btn.disabled = true);
+                button.classList.add(option.correct ? 'bg-green-100' : 'bg-red-100');
+                selectedAnswers.add(index);
+                nextBtn.disabled = false;
+                nextBtn.classList.remove('bg-gray-300', 'text-gray-500');
+                nextBtn.classList.add('bg-indigo-600', 'text-white');
+            };
+            optionsContainer.appendChild(button);
+        });
     }
 }
 
 function handleNextQuestion() {
-    // This function remains the same as your original.
-    // ... (your existing handleNextQuestion logic)
     const question = questions[currentQuestionIndex];
     if (question.type === 'recognition') {
         selectedAnswers.forEach(selectedIndex => {
@@ -141,55 +151,29 @@ function handleNextQuestion() {
     }
 }
 
-
-// --- [MODIFIED] - The showResults function is now upgraded ---
 function showResults() {
-    // Calculate results
-    const sortedTopics = Object.values(capsTopics).sort((a, b) => b.score - a.score);
-
-    // Step 1: Save the results to the browser's local storage
+    const sortedTopics = Object.values(capsTopics).map(t => ({ name: t.name, score: t.score })).sort((a, b) => b.score - a.score);
     saveResultsToStorage(sortedTopics);
-
-    // Step 2: Instead of showing the old results screen, render the new dashboard
     showDashboard();
 }
 
-
-// --- [NEW] - PWA View Management Functions ---
-
-/**
- * Saves the diagnostic results to the browser's localStorage.
- * @param {Array} results - The array of topic objects with their scores.
- */
+// --- PWA View Management Functions ---
 function saveResultsToStorage(results) {
     localStorage.setItem('mathsDiagnosticResults', JSON.stringify(results));
 }
 
-/**
- * Renders the main dashboard view into the 'app' container.
- */
 function showDashboard() {
-    // Hide all original screens
-    welcomeScreen.classList.add('hidden');
-    diagnosticScreen.classList.add('hidden');
-    resultsScreen.classList.add('hidden');
-
-    // Get results from storage
     const results = JSON.parse(localStorage.getItem('mathsDiagnosticResults'));
-    if (!results) {
-        showWelcome(); // If no results, show welcome screen
-        return;
-    }
+    if (!results) { showWelcome(); return; }
 
-    let strongCount = results.filter(topic => topic.score > 0).length;
+    const strongCount = results.filter(topic => topic.score > 0).length;
     const percentage = Math.round((strongCount / results.length) * 100);
 
-    // Build the dashboard HTML as a string
     const dashboardHTML = `
         <div class="fade-in p-4 md:p-6 space-y-6">
             <div class="text-center">
                 <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Your Revision Dashboard</h1>
-                <p class="text-lg text-gray-600 mt-2">You're showing strength in ${percentage}% of topics! Let's get to work on the rest.</p>
+                <p class="text-lg text-gray-600 mt-2">You're showing strength in ${percentage}% of topics! Let's get to work.</p>
             </div>
             <div class="bg-white p-6 rounded-2xl shadow-md">
                 <h2 class="text-xl font-bold mb-4">Your Personalised Revision Plan</h2>
@@ -201,99 +185,111 @@ function showDashboard() {
                         <div class="p-4 rounded-lg flex items-center justify-between ${isStrong ? 'bg-green-50' : 'bg-yellow-50'}">
                             <span class="font-medium ${isStrong ? 'text-green-800' : 'text-yellow-800'}">${topic.name}</span>
                             ${!isStrong ? `<button data-topic="${topicKey}" class="focus-btn bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-all">Start Module</button>` : `<span class="font-bold text-green-800">Strength</span>`}
-                        </div>
-                        `;
+                        </div>`;
                     }).join('')}
                 </div>
             </div>
             <button id="retake-diagnostic-btn" class="w-full text-indigo-600 font-semibold py-3">Retake Diagnostic Test</button>
-        </div>
-    `;
-
-    // Set the main app container's content to our new dashboard
+        </div>`;
     app.innerHTML = dashboardHTML;
-
-    // Add event listeners for the new buttons
+    
     document.querySelectorAll('.focus-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const topic = e.target.dataset.topic;
-            if (topic === 'calculus') {
-                showFocusArea(calculusPack);
-            } else {
-                alert(topic.charAt(0).toUpperCase() + topic.slice(1) + ' pack coming soon!');
-            }
+            if (topic === 'calculus') { showFocusArea(calculusPack); }
+            else { alert(topic.charAt(0).toUpperCase() + topic.slice(1) + ' pack coming soon!'); }
         });
     });
-
     document.getElementById('retake-diagnostic-btn').addEventListener('click', () => {
         localStorage.removeItem('mathsDiagnosticResults');
         showWelcome();
     });
 }
 
-/**
- * Renders the learning module for a specific topic.
- * @param {object} pack - The content pack for the topic (e.g., calculusPack).
- */
 function showFocusArea(pack) {
     const focusAreaHTML = `
         <div class="fade-in p-4 md:p-6 space-y-6">
             <button id="back-to-dashboard" class="text-indigo-600 font-semibold mb-4">&larr; Back to Dashboard</button>
             <div class="bg-white p-6 rounded-2xl shadow-md">
-                <!-- Placeholder for tabbed navigation -->
+                <h1 class="text-2xl font-bold mb-4">${pack.title} Focus Pack</h1>
                 <div class="border-b border-gray-200 mb-4">
-                    <nav class="flex space-x-4" aria-label="Tabs">
-                        <button class="tab-btn active-tab" data-content="cheatSheet">Cheat Sheet</button>
-                        <button class="tab-btn" data-content="workedExamples">Examples</button>
-                        <button class="tab-btn" data-content="practiceDrill">Drill</button>
-                        <button class="tab-btn" data-content="pastPapers">Past Papers</button>
+                    <nav class="flex space-x-2 md:space-x-4" aria-label="Tabs">
+                        <button class="tab-btn active-tab" data-content-key="cheatSheet">Cheat Sheet</button>
+                        <button class="tab-btn" data-content-key="workedExamples">Examples</button>
+                        <button class="tab-btn" data-content-key="practiceDrill">Drill</button>
+                        <button class="tab-btn" data-content-key="pastPapers">Past Papers</button>
                     </nav>
                 </div>
-                <div id="tab-content" class="prose max-w-none">
-                    ${pack.cheatSheet}
-                </div>
+                <div id="tab-content">${pack.cheatSheet}</div>
             </div>
-        </div>
-    `;
+        </div>`;
     app.innerHTML = focusAreaHTML;
 
-    // Add event listeners for tabs
-    const tabContainer = document.getElementById('tab-content');
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            // Update active tab style
             document.querySelector('.active-tab').classList.remove('active-tab');
             e.target.classList.add('active-tab');
-            // Update content
-            const contentKey = e.target.dataset.content;
-            tabContainer.innerHTML = pack[contentKey]; // Note: for the drill, you'll need to render it interactively
+            const contentKey = e.target.dataset.contentKey;
+            
+            if (contentKey === 'practiceDrill') {
+                renderPracticeDrill(pack.practiceDrill);
+            } else {
+                document.getElementById('tab-content').innerHTML = pack[contentKey];
+            }
         });
     });
-
     document.getElementById('back-to-dashboard').addEventListener('click', showDashboard);
 }
 
-/**
- * Shows the initial welcome screen.
- */
+function renderPracticeDrill(drillQuestions) {
+    const tabContent = document.getElementById('tab-content');
+    let drillHTML = `<div class="space-y-6">`;
+    drillQuestions.forEach((q, index) => {
+        drillHTML += `
+            <div class="p-4 border rounded-lg">
+                <p class="font-semibold text-gray-500 text-sm">${q.section}</p>
+                <p class="my-2">${q.question}</p>
+                <button data-answer-id="${index}" class="show-answer-btn text-sm text-indigo-600 font-semibold">Show Answer</button>
+                <p id="answer-${index}" class="hidden mt-2 p-2 bg-green-50 text-green-800 rounded">${q.answer}</p>
+            </div>
+        `;
+    });
+    drillHTML += `</div>`;
+    tabContent.innerHTML = drillHTML;
+
+    document.querySelectorAll('.show-answer-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const answerId = e.target.dataset.answerId;
+            const answerEl = document.getElementById(`answer-${answerId}`);
+            answerEl.classList.toggle('hidden');
+            e.target.textContent = answerEl.classList.contains('hidden') ? 'Show Answer' : 'Hide Answer';
+        });
+    });
+}
+
 function showWelcome() {
-    app.innerHTML = ''; // Clear app
-    welcomeScreen.classList.remove('hidden');
-    app.appendChild(welcomeScreen); // Add welcome screen back
-    // Re-add event listener since we cleared the innerHTML
+    app.innerHTML = '';
+    const welcomeHTML = `
+        <div id="welcome-screen" class="text-center space-y-6 fade-in">
+            <div class="flex justify-center">
+                <div class="bg-indigo-100 text-indigo-600 p-4 rounded-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                </div>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Matric Maths Confidence Builder</h1>
+            <p class="text-lg text-gray-600">Finals are coming, but you've got this. Let's find your strengths and create a smart revision plan in just 5 minutes.</p>
+            <button id="start-btn" class="w-full bg-indigo-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:bg-indigo-700 transform hover:-translate-y-1 transition-all duration-300">Let's Get Started</button>
+        </div>
+    `;
+    app.innerHTML = welcomeHTML;
     app.querySelector('#start-btn').addEventListener('click', startDiagnostic);
 }
 
-
 // --- App Initialization ---
-// This code runs when the entire page has loaded.
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if the user has taken the diagnostic before
     if (localStorage.getItem('mathsDiagnosticResults')) {
-        // If they have, take them straight to their dashboard
         showDashboard();
     } else {
-        // Otherwise, show the welcome screen to start the quiz
         showWelcome();
     }
 });
