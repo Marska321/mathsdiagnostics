@@ -1,13 +1,17 @@
-// --- [START] main.js (Fully Interactive Version) ---
+// --- [START] main.js (Complete & Corrected Version with PWA Install Logic) ---
 
 // --- Step 1: Import Content ---
 import { calculusPack } from './content/calculus.js';
+import { trigonometryPack } from './content/trigonometry.js';
 
 // --- DOM Element Selection ---
 const app = document.getElementById('app');
-const welcomeScreen = document.getElementById('welcome-screen');
-const diagnosticScreen = document.getElementById('diagnostic-screen');
-const resultsScreen = document.getElementById('results-screen'); // Kept for initial structure
+// We get the original HTML elements to use as templates
+const welcomeScreenTemplate = document.getElementById('welcome-screen');
+const diagnosticScreenTemplate = document.getElementById('diagnostic-screen');
+// The original results screen is no longer used directly, but we acknowledge it
+const resultsScreenTemplate = document.getElementById('results-screen');
+
 
 // --- DATA & STATE ---
 const capsTopics = {
@@ -66,21 +70,25 @@ const questions = [
         options: [ { text: "Adjacent / Hypotenuse", correct: false }, { text: "Opposite / Adjacent", correct: false }, { text: "Opposite / Hypotenuse", correct: true }, { text: "Adjacent / Opposite", correct: false }, ]
     }
 ];
-
 let currentQuestionIndex = 0;
 let selectedAnswers = new Set();
 
-// --- DIAGNOSTIC QUIZ FUNCTIONS ---
+
+// --- DIAGNOSTIC QUIZ FUNCTIONS (Restored to full length) ---
 function startDiagnostic() {
     for (const key in capsTopics) { capsTopics[key].score = 0; }
     currentQuestionIndex = 0;
-    app.innerHTML = '';
+    
+    app.innerHTML = ''; // Clear the main container
+    const diagnosticScreen = diagnosticScreenTemplate.cloneNode(true);
     app.appendChild(diagnosticScreen);
     diagnosticScreen.classList.remove('hidden');
+    diagnosticScreen.querySelector('#next-btn').addEventListener('click', handleNextQuestion);
     showQuestion();
 }
 
 function showQuestion() {
+    const diagnosticScreen = app.querySelector('#diagnostic-screen');
     const question = questions[currentQuestionIndex];
     const progressBar = diagnosticScreen.querySelector('#progress-bar');
     const questionTitle = diagnosticScreen.querySelector('#question-title');
@@ -97,6 +105,9 @@ function showQuestion() {
 
     if (question.type === 'recognition') {
         nextBtn.disabled = false;
+        nextBtn.classList.remove('bg-gray-300', 'text-gray-500');
+        nextBtn.classList.add('bg-indigo-600', 'text-white');
+        
         question.options.forEach((option, index) => {
             const button = document.createElement('button');
             button.className = "w-full text-left p-4 border rounded-lg transition-colors duration-200 hover:bg-indigo-50";
@@ -180,7 +191,7 @@ function showDashboard() {
                 <div class="space-y-3">
                     ${results.map(topic => {
                         const isStrong = topic.score > 0;
-                        const topicKey = topic.name.split(',')[0].toLowerCase().replace(/ /g, '');
+                        const topicKey = topic.name.split(',')[0].split(' ')[0].toLowerCase();
                         return `
                         <div class="p-4 rounded-lg flex items-center justify-between ${isStrong ? 'bg-green-50' : 'bg-yellow-50'}">
                             <span class="font-medium ${isStrong ? 'text-green-800' : 'text-yellow-800'}">${topic.name}</span>
@@ -189,6 +200,7 @@ function showDashboard() {
                     }).join('')}
                 </div>
             </div>
+            <button id="install-btn" class="w-full bg-teal-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:bg-teal-600 transition-all" style="display: none;">Install App to Your Device</button>
             <button id="retake-diagnostic-btn" class="w-full text-indigo-600 font-semibold py-3">Retake Diagnostic Test</button>
         </div>`;
     app.innerHTML = dashboardHTML;
@@ -196,14 +208,27 @@ function showDashboard() {
     document.querySelectorAll('.focus-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const topic = e.target.dataset.topic;
-            if (topic === 'calculus') { showFocusArea(calculusPack); }
-            else { alert(topic.charAt(0).toUpperCase() + topic.slice(1) + ' pack coming soon!'); }
+            if (topic === 'calculus') {
+                showFocusArea(calculusPack);
+            } else if (topic === 'trigonometry') {
+                showFocusArea(trigonometryPack);
+            }
+            else {
+                alert(topic.charAt(0).toUpperCase() + topic.slice(1) + ' pack coming soon!');
+            }
         });
     });
     document.getElementById('retake-diagnostic-btn').addEventListener('click', () => {
         localStorage.removeItem('mathsDiagnosticResults');
         showWelcome();
     });
+
+    // Re-attach PWA install button logic
+    const installBtn = document.getElementById('install-btn');
+    if (deferredPrompt) {
+        installBtn.style.display = 'block';
+        installBtn.addEventListener('click', handleInstallPrompt);
+    }
 }
 
 function showFocusArea(pack) {
@@ -269,24 +294,52 @@ function renderPracticeDrill(drillQuestions) {
 
 function showWelcome() {
     app.innerHTML = '';
-    const welcomeHTML = `
-        <div id="welcome-screen" class="text-center space-y-6 fade-in">
-            <div class="flex justify-center">
-                <div class="bg-indigo-100 text-indigo-600 p-4 rounded-full">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                </div>
-            </div>
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Matric Maths Confidence Builder</h1>
-            <p class="text-lg text-gray-600">Finals are coming, but you've got this. Let's find your strengths and create a smart revision plan in just 5 minutes.</p>
-            <button id="start-btn" class="w-full bg-indigo-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:bg-indigo-700 transform hover:-translate-y-1 transition-all duration-300">Let's Get Started</button>
-        </div>
-    `;
-    app.innerHTML = welcomeHTML;
-    app.querySelector('#start-btn').addEventListener('click', startDiagnostic);
+    const welcomeScreen = welcomeScreenTemplate.cloneNode(true);
+    app.appendChild(welcomeScreen);
+    welcomeScreen.classList.remove('hidden');
+    welcomeScreen.querySelector('#start-btn').addEventListener('click', startDiagnostic);
 }
+
+// --- PWA Install Logic (Restored) ---
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  // Prevent the mini-infobar from appearing on mobile
+  e.preventDefault();
+  // Stash the event so it can be triggered later.
+  deferredPrompt = e;
+  // Optionally, show your own install button now
+  const installBtn = document.getElementById('install-btn');
+  if (installBtn) {
+    installBtn.style.display = 'block';
+  }
+});
+
+async function handleInstallPrompt() {
+    if (!deferredPrompt) {
+        return;
+    }
+    // Show the install prompt
+    deferredPrompt.prompt();
+    // Wait for the user to respond to the prompt
+    const { outcome } = await deferredPrompt.userChoice;
+    // We've used the prompt, and can't use it again, throw it away
+    deferredPrompt = null;
+    // Hide the install button
+    const installBtn = document.getElementById('install-btn');
+    if (installBtn) {
+        installBtn.style.display = 'none';
+    }
+}
+
 
 // --- App Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
+    // Hide original static templates from the document flow
+    if (welcomeScreenTemplate) welcomeScreenTemplate.classList.add('hidden');
+    if (diagnosticScreenTemplate) diagnosticScreenTemplate.classList.add('hidden');
+    if (resultsScreenTemplate) resultsScreenTemplate.classList.add('hidden');
+    
     if (localStorage.getItem('mathsDiagnosticResults')) {
         showDashboard();
     } else {
