@@ -335,6 +335,8 @@ async function handleInstallPrompt() {
 
 // --- App Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("Checking storage:", localStorage.getItem('mathsDiagnosticResults')); // <-- ADD THIS LINE
+
     // Hide original static templates from the document flow
     if (welcomeScreenTemplate) welcomeScreenTemplate.classList.add('hidden');
     if (diagnosticScreenTemplate) diagnosticScreenTemplate.classList.add('hidden');
