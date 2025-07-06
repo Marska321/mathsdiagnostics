@@ -1,15 +1,16 @@
-// --- [START] main.js (Complete & Corrected Version with PWA Install Logic) ---
+// --- [START] main.js (Complete & Corrected with All Modules) ---
 
 // --- Step 1: Import Content ---
 import { calculusPack } from './content/calculus.js';
 import { trigonometryPack } from './content/trigonometry.js';
+import { analyticalGeometryPack } from './content/analytical-geometry.js';
 
 // --- DOM Element Selection ---
 const app = document.getElementById('app');
 // We get the original HTML elements to use as templates
 const welcomeScreenTemplate = document.getElementById('welcome-screen');
 const diagnosticScreenTemplate = document.getElementById('diagnostic-screen');
-// The original results screen is no longer used directly, but we acknowledge it
+// The original results screen is no longer used directly
 const resultsScreenTemplate = document.getElementById('results-screen');
 
 
@@ -74,7 +75,7 @@ let currentQuestionIndex = 0;
 let selectedAnswers = new Set();
 
 
-// --- DIAGNOSTIC QUIZ FUNCTIONS (Restored to full length) ---
+// --- DIAGNOSTIC QUIZ FUNCTIONS ---
 function startDiagnostic() {
     for (const key in capsTopics) { capsTopics[key].score = 0; }
     currentQuestionIndex = 0;
@@ -191,7 +192,7 @@ function showDashboard() {
                 <div class="space-y-3">
                     ${results.map(topic => {
                         const isStrong = topic.score > 0;
-                        const topicKey = topic.name.split(',')[0].split(' ')[0].toLowerCase();
+                        const topicKey = topic.name.split(',')[0].split(' ')[0].toLowerCase().replace('&', '');
                         return `
                         <div class="p-4 rounded-lg flex items-center justify-between ${isStrong ? 'bg-green-50' : 'bg-yellow-50'}">
                             <span class="font-medium ${isStrong ? 'text-green-800' : 'text-yellow-800'}">${topic.name}</span>
@@ -212,6 +213,8 @@ function showDashboard() {
                 showFocusArea(calculusPack);
             } else if (topic === 'trigonometry') {
                 showFocusArea(trigonometryPack);
+            } else if (topic === 'euclidean' || topic === 'geometry') {
+                showFocusArea(analyticalGeometryPack);
             }
             else {
                 alert(topic.charAt(0).toUpperCase() + topic.slice(1) + ' pack coming soon!');
@@ -223,7 +226,6 @@ function showDashboard() {
         showWelcome();
     });
 
-    // Re-attach PWA install button logic
     const installBtn = document.getElementById('install-btn');
     if (deferredPrompt) {
         installBtn.style.display = 'block';
@@ -300,15 +302,11 @@ function showWelcome() {
     welcomeScreen.querySelector('#start-btn').addEventListener('click', startDiagnostic);
 }
 
-// --- PWA Install Logic (Restored) ---
+// --- PWA Install Logic ---
 let deferredPrompt;
-
 window.addEventListener('beforeinstallprompt', (e) => {
-  // Prevent the mini-infobar from appearing on mobile
   e.preventDefault();
-  // Stash the event so it can be triggered later.
   deferredPrompt = e;
-  // Optionally, show your own install button now
   const installBtn = document.getElementById('install-btn');
   if (installBtn) {
     installBtn.style.display = 'block';
@@ -319,25 +317,17 @@ async function handleInstallPrompt() {
     if (!deferredPrompt) {
         return;
     }
-    // Show the install prompt
     deferredPrompt.prompt();
-    // Wait for the user to respond to the prompt
     const { outcome } = await deferredPrompt.userChoice;
-    // We've used the prompt, and can't use it again, throw it away
     deferredPrompt = null;
-    // Hide the install button
     const installBtn = document.getElementById('install-btn');
     if (installBtn) {
         installBtn.style.display = 'none';
     }
 }
 
-
 // --- App Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Checking storage:", localStorage.getItem('mathsDiagnosticResults')); // <-- ADD THIS LINE
-
-    // Hide original static templates from the document flow
     if (welcomeScreenTemplate) welcomeScreenTemplate.classList.add('hidden');
     if (diagnosticScreenTemplate) diagnosticScreenTemplate.classList.add('hidden');
     if (resultsScreenTemplate) resultsScreenTemplate.classList.add('hidden');
