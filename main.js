@@ -289,6 +289,30 @@ function showResults() {
     resultsSummary.textContent = `Amazing work! You're already showing strength in ${percentage}% of the core topics. Focus on the yellow areas to make your revision super effective.`;
 }
 
+// PWA Install Prompt Logic
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const installBtn = document.getElementById('install-btn');
+  if (installBtn) {
+    installBtn.style.display = 'block';
+  }
+});
+
+const installBtn = document.getElementById('install-btn');
+if (installBtn) {
+  installBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      installBtn.style.display = 'none';
+      deferredPrompt = null;
+    }
+  });
+}
+
 // --- Event Listeners ---
 // This connects the buttons in your HTML to the JavaScript functions.
 startBtn.addEventListener('click', startDiagnostic);
